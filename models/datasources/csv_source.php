@@ -103,7 +103,7 @@ class CsvSource extends DataSource {
  * @var array
  * @access private
  */
-	var $__baseConfig = array(
+	var $_baseConfig = array(
 		'datasource' => 'csv',
 		'path' => '.',
 		'extension' => 'csv',
@@ -403,9 +403,9 @@ class CsvSource extends DataSource {
 /**
  * Calculate
  *
- * @param Model $model 
- * @param mixed $func 
- * @param array $params 
+ * @param Model $model
+ * @param mixed $func
+ * @param array $params
  * @return array
  * @access public
  */
