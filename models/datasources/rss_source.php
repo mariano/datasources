@@ -112,7 +112,8 @@ class RssSource extends DataSource {
  * @return mixed
  */
 	function read(&$model, $queryData = array()) {
-		$data = $this->_fetch($this->config['url']);
+		$url = !empty($queryData['url']) ? $queryData['url'] : $this->config['url'];
+		$data = $this->_fetch($url);
 		if (empty($data) || empty($data['Rss']) || empty($data['Rss']['Channel'])) {
 			return false;
 		}
@@ -155,7 +156,7 @@ class RssSource extends DataSource {
 	function _fetch($url) {
 		$data = false;
 		if (!empty($this->config['cache'])) {
-			$cacheKey = 'rss_'.md5($this->config['url']);
+			$cacheKey = 'rss_'.md5($url);
 			$data = Cache::read($cacheKey, $this->config['cache']);
 		}
 
