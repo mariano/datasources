@@ -265,6 +265,10 @@ class CsvSource extends DataSource {
 			$this->page = $queryData['page'];
 		}
 
+		if (empty($this->fields)) {
+			$this->describe($model);
+		}
+
 		if (empty($queryData['fields'])) {
 			$fields = $this->fields;
 			$allFields = true;
