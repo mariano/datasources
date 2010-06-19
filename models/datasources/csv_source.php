@@ -74,6 +74,13 @@ class CsvSource extends DataSource {
 	var $fields = null;
 
 /**
+ * Field Names by table name
+ *
+ * @var mixed
+ * @access public
+ */
+	var $tableFields = array();
+/**
  * File Handle
  *
  * @var mixed
@@ -108,7 +115,8 @@ class CsvSource extends DataSource {
 		'path' => '.',
 		'extension' => 'csv',
 		'readonly' => true,
-		'recursive' => false);
+		'recursive' => false
+	);
 
 /**
  * Constructor
@@ -121,6 +129,11 @@ class CsvSource extends DataSource {
 		$this->debug = Configure::read('debug') > 0;
 		$this->fullDebug = Configure::read('debug') > 1;
 		parent::__construct($config);
+
+		if ($this->config['path'][strlen($this->config['path']) - 1] != DS) {
+			$this->config['path'] .= DS;
+		}
+
 		if ($autoConnect) {
 			$this->connect();
 		}
@@ -168,7 +181,7 @@ class CsvSource extends DataSource {
 		if ($this->config['recursive']) {
 			$list = $this->connection->findRecursive('.*' . $extPattern, true);
 			foreach($list as &$item) {
-				$item = mb_substr($item, mb_strlen($this->config['path'] . DS));
+				$item = mb_substr($item, mb_strlen($this->config['path']));
 			}
 		} else {
 			$list = $this->connection->find('.*' . $extPattern, true);
@@ -191,6 +204,7 @@ class CsvSource extends DataSource {
  */
 	function describe($model) {
 		$this->__getDescriptionFromFirstLine($model);
+		$this->tableFields[$model->table] = $this->fields;
 		return $this->fields;
 	}
 
@@ -203,7 +217,7 @@ class CsvSource extends DataSource {
  */
 	function __getDescriptionFromFirstLine($model) {
 		$filename = $model->table . '.' . $this->config['extension'];
-		$handle = fopen($this->config['path'] . DS .  $filename, 'r');
+		$handle = fopen($this->config['path'] . $filename, 'r');
 		$line = rtrim(fgets($handle));
 		$data_comma = explode(',', $line);
 		$data_semicolon = explode(';', $line);
@@ -249,9 +263,12 @@ class CsvSource extends DataSource {
  */
 	function read(&$model, $queryData = array(), $recursive = null) {
 		$config = $this->config;
-		$filename = $config['path'] . DS . $model->table . '.' . $config['extension'];
-		if (!Set::extract($this->handle, $model->table)) {
+		$filename = $config['path'] . $model->table . '.' . $config['extension'];
+		if (empty($this->handle[$model->table])) {
 			$this->handle[$model->table] = fopen($filename, 'r');
+			if (!is_resource($this->handle[$model->table])) {
+				return false;
+			}
 		} else {
 			fseek($this->handle[$model->table], 0, SEEK_SET) ;
 		}
@@ -265,7 +282,7 @@ class CsvSource extends DataSource {
 			$this->page = $queryData['page'];
 		}
 
-		if (empty($this->fields)) {
+		if (empty($this->tableFields[$model->table])) {
 			$this->describe($model);
 		}
 
