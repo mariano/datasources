@@ -28,14 +28,6 @@ App::import('Core', array('HttpSocket', 'Xml'));
 class XmlrpcSource extends Datasource {
 
 /**
- * Version for this Data Source.
- *
- * @var string
- * @access public
- */
-	var $version = '0.1';
-
-/**
  * Description string for this Data Source.
  *
  * @var string
@@ -95,17 +87,17 @@ class XmlrpcSource extends Datasource {
 /**
  * Perform a XML RPC call
  *
+ * @param string $method XML-RPC method name
+ * @param array $params List with XML-RPC parameters
+ * @param Model $model Reference to model (unused)
  * @return mixed Response of XML-RPC Server. If return false, $this->error contain a error message.
  * @access public
  */
-	function query() {
-		$args = func_get_args();
-		if (!isset($args[0]) || !is_string($args[0])) {
+	function query($method, $params = array(), &$model = null) {
+		if (!is_string($method)) {
 			return false;
 		}
-		$method = $args[0];
-		unset($args[0]);
-		return $this->_request($method, $args);
+		return $this->_request($method, $params);
 	}
 
 /**
@@ -213,7 +205,11 @@ class XmlrpcSource extends Datasource {
 					$normalized = $this->_normalizeParam($item);
 					$data[] = $normalized['value'];
 				}
-				return array('value' => array('array' => array('data' => array('value' => $data))));
+				$return = array('value' => array('array' => array('data' => array())));
+				if (!empty($data)) {
+					$return['value']['array']['data']['value'] = $data;
+				}
+				return $return;
 			}
 			// Is struct
 			$members = array();
@@ -271,16 +267,18 @@ class XmlrpcSource extends Datasource {
 				return (float)$value;
 			case 'array':
 				$return = array();
-				foreach ($value['data']['value'] as $key => $newValue) {
-					// Reconstruct an array form, for arrays with only one entry.
-					if (!is_array($newValue)) {
-						$newValue = array($key => $newValue);
-						$key = 0;
-					}
-					if ($key === 'struct' || $key === 'array') {
-						$return[] = $this->__parseResponse(array($key => $newValue));
-					} else {
-						$return[] = $this->__parseResponse($newValue);
+				if (isset($value['data']['value']) && is_array($value['data']['value'])) {
+					foreach ($value['data']['value'] as $key => $newValue) {
+						// Reconstruct an array form, for arrays with only one entry.
+						if (!is_array($newValue)) {
+							$newValue = array($key => $newValue);
+							$key = 0;
+						}
+						if ($key === 'struct' || $key === 'array') {
+							$return[] = $this->__parseResponse(array($key => $newValue));
+						} else {
+							$return[] = $this->__parseResponse($newValue);
+						}
 					}
 				}
 				return $return;
@@ -311,4 +309,3 @@ class XmlrpcSource extends Datasource {
 		return false;
 	}
 }
-?>

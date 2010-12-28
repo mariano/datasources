@@ -117,8 +117,6 @@ class DboSqlsrv extends DboSource {
  * @return boolean True if the database could be connected, else false
  */
 	function connect() {
-		$config = $this->config;
-
 		$os = env('OS');
 		if (!empty($os) && strpos($os, 'Windows') !== false) {
 			$sep = ', ';
@@ -127,23 +125,27 @@ class DboSqlsrv extends DboSource {
 		}
 		$this->connected = false;
 
-		if (is_numeric($config['port'])) {
-			$port = $sep . $config['port'];	// Port number
-		} elseif ($config['port'] === null) {
+		if (is_numeric($this->config['port'])) {
+			$port = $sep . $this->config['port'];	// Port number
+		} elseif ($this->config['port'] === null) {
 			$port = '';						// No port - SQL Server 2005
 		} else {
-			$port = '\\' . $config['port'];	// Named pipe
+			$port = '\\' . $this->config['port'];	// Named pipe
 		}
+
+		$params = array(
+			'Database' => $this->config['database'],
+			'CharacterSet' => $this->config['charset'],
+			'MultipleActiveResultSets' => $this->config['mars']);
 
 		// Windows vs SQL authentication
-		if(!empty($config['login']) && !empty($config['password'])) {
-			$params = array('UID'=>$config['login'], 'PWD'=>$config['password'], 'Database'=>$config['database'], 'CharacterSet'=>$config['charset'], 'MultipleActiveResultSets'=>$config['mars']);
-		} else {
-			$params = array('Database'=>$config['database'], 'CharacterSet'=>$config['charset'], 'MultipleActiveResultSets'=>$config['mars']);
+		if (!empty($this->config['login']) && !empty($this->config['password'])) {
+			$params['UID'] = $this->config['login'];
+			$params['PWD'] = $this->config['password'];
 		}
 
-		$this->connection = sqlsrv_connect($config['host'].$port, $params);
-		if ($this->connection !== false) {
+		$this->connection = sqlsrv_connect($this->config['host'] . $port, $params);
+		if (is_resource($this->connection) && $this->connection !== false) {
 			$this->_execute("SET DATEFORMAT ymd");
 			$this->connected = true;
 		}
@@ -165,8 +167,10 @@ class DboSqlsrv extends DboSource {
  * @return boolean True if the database could be disconnected, else false
  */
 	function disconnect() {
-		@sqlsrv_free_stmt($this->results);
-                $this->connected = !sqlsrv_close($this->connection);
+		if (!empty($this->results)) {
+			@sqlsrv_free_stmt($this->results);
+		}
+		$this->connected = !sqlsrv_close($this->connection);
 		return !$this->connected;
 	}
 
@@ -777,4 +781,3 @@ class DboSqlsrv extends DboSource {
 		return null;
 	}
 }
-?>
